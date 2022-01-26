@@ -31,6 +31,31 @@ dailydis<-readNWISdv(siteNumber=siteNumbers, parameterCd="00060", startDate = (S
 
 dailytemp<-readNWISdv(siteNumber=siteNumbers, parameterCd="00010", startDate=(Sys.Date()-3650), statCd=c('00001','00002','00003',"00008"))
 
+#let's look at what data we can get for velocity and stream depth - 
+#lots of different parameter codes that might fit the bill, so let's look at data and see what we have
+velocparam<-c("00055","70232", '72149', '72168',"72169","72190","72254","72255","72294","72321",
+                            "72322","72323","81380","81904"
+                            )
+velocinfo<-readNWISpCode(velocparam)
+  
+depthparam<-c("00064","72178","72199","82903", "85310","85311")
+depthinfo<-readNWISpCode(depthparam)
+
+#see if we can get all the NWIS sites in Oregon - 
+#when I refine search to just surface water (no ocean) I get about 6,910 sites
+nwisor<-whatNWISsites(stateCd="OR",siteType=c("ES","LK","SP","ST"))
+
+#what data is there for velocity - very little (only 50 stations in all)
+orveloc<-whatNWISdata(stateCd="OR",parameterCd=velocparam)
+
+#what data is there for depth - more data, but not great (490 stations in all - some of it rather old)
+ordepth<-whatNWISdata(stateCd="OR",parameterCd=depthparam)
+
+#compared with discharge? - have discharge data at 1,708 stations
+ordis<-whatNWISdata(stateCd="OR",parameterCd="00060")
+
+###Lets do some calculations######
+
 #copying in the information from Vanessa and Ryan Michie so that we can calculate important MZ flow statistics such as 7Q10, 1Q10 and 30Q5
 #...will likely need to develop a different code to take care of the harmonic mean flow
 
