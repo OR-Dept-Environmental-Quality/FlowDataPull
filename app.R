@@ -46,11 +46,11 @@ ui<-fluidPage(
     
       tags$em("Note: Flow calculations will be run on entire dataset selected"),
     
-       # Start Date (make start date ten years ago as default)
+       # Start Date (make start date thirty years ago as default)
       dateInput("startd",
               label = "Select Start Date",
               min = '1949-09-15',
-              value = Sys.Date()-3650),
+              value = Sys.Date()-10950),
        # End date
       dateInput("endd",
               label = "Select End Date",
@@ -83,14 +83,15 @@ ui<-fluidPage(
               tabPanel("USGS flow data",
                        DT::dataTableOutput("rawtable")),
               
-              #total 7Q10, 30Q5, and harmonic mean flow for time range specified
+              #total 1Q10, 7Q10, 30Q5, and harmonic mean flow for time range specified
               tabPanel("Flow Calculations for all data",
+                       textOutput("oneQten"),
                        textOutput("sevenQten"),
                        textOutput("thirtyQfive"),
                        textOutput("harmonic")),
               
-              #monthly calcs for 7Q10 and 30Q5
-              tabPanel("Monthly 7Q10 and 30Q5",
+              #monthly calcs for 1Q10, 7Q10 and 30Q5
+              tabPanel("Monthly 1Q10, 7Q10, and 30Q5",
                        DT::dataTableOutput("monthlys"))
             )
   )
@@ -143,7 +144,19 @@ server<- function(input, output, session) {
    data()
  })
  
- #calculate the total flow stats for 7Q10, 30Q5, and harmonic mean flow
+ #calculate the total flow stats for 1Q10, 7Q10, 30Q5, and harmonic mean flow
+ oneQten<-eventReactive(input$goButton, {
+   q.df<-data()
+   q <- q.df[,c(3,4)]
+   colnames(q) <-c("date", "flow")
+   q$date <- as.POSIXct(q$date, format="%Y-%m-%d")
+   
+   one<-dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="10-01", wyend="09-30")
+   
+   one
+ })
+ 
+ 
  sevenQten<-eventReactive(input$goButton, {
    q.df<-data()
    q <- q.df[,c(3,4)]
@@ -178,6 +191,9 @@ server<- function(input, output, session) {
  })       
  
  #data for shiny app view
+ output$oneQten<-renderText({
+   paste0("1Q10: ",round(oneQten(),digits=2))
+ })
  output$sevenQten<-renderText({
    paste0("7Q10: ",round(sevenQten(),digits=2))
  })
@@ -188,7 +204,7 @@ server<- function(input, output, session) {
    paste0("Harmonic Mean: ",round(harmonic(),digits=2))
  })
               
-#calculate monthly 7Q10s and 30Q5s - merge into one dataframe
+#calculate monthly 1Q10s, 7Q10s, and 30Q5s - merge into one dataframe
  #note that monthly flows for february will exclude a leap year day
  
  monthly<-eventReactive(input$goButton, {
@@ -198,6 +214,19 @@ server<- function(input, output, session) {
    q$date <- as.POSIXct(q$date, format="%Y-%m-%d")
    
    #calculate monthly dflow for 7Q10 and 30Q5
+   jan1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="01-01", wyend="01-31"),digits=2)
+   feb1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="02-01", wyend="02-28"),digits=2)
+   mar1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="03-01", wyend="03-31"),digits=2)
+   apr1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="04-01", wyend="04-30"),digits=2)
+   may1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="05-01", wyend="05-31"),digits=2)
+   jun1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="06-01", wyend="06-30"),digits=2)
+   jul1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="07-01", wyend="07-31"),digits=2)
+   aug1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="08-01", wyend="08-31"),digits=2)
+   sep1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="09-01", wyend="09-30"),digits=2)
+   oct1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="10-01", wyend="10-31"),digits=2)
+   nov1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="11-01", wyend="11-30"),digits=2)
+   dec1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="12-01", wyend="12-31"),digits=2)
+   
    jan7<-round(dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart="01-01", wyend="01-31"),digits=2)
    feb7<-round(dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart="02-01", wyend="02-28"),digits=2)
    mar7<-round(dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart="03-01", wyend="03-31"),digits=2)
@@ -226,10 +255,11 @@ server<- function(input, output, session) {
    
    #combine into df
    months<-c("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")
+   ones<-c(jan1,feb1,mar1,apr1,may1,jun1,jul1,aug1,sep1,oct1,nov1,dec1)
    sevens<-c(jan7,feb7,mar7,apr7,may7,jun7,jul7,aug7,sep7,oct7,nov7,dec7)
    thirtys<-c(jan30,feb30,mar30,apr30,may30,jun30,jul30,aug30,sep30,oct30,nov30,dec30)
    
-   monthly<-data.frame("Month"=months,"7Q10"=sevens,"30Q5"=thirtys)
+   monthly<-data.frame("Month"=months,"1Q10"=ones,"7Q10"=sevens,"30Q5"=thirtys)
    
    monthly
    
@@ -237,7 +267,9 @@ server<- function(input, output, session) {
  
  #data for shiny app view
  output$monthlys<-renderDataTable({
-   monthly()
+   monthly<-datatable(monthly(), options=list(pageLength = 12))
+   
+   monthly
  })
               
 ##### Excel Output ####
@@ -283,16 +315,19 @@ param<-eventReactive(input$goButton, {
   
   writeData(wb,"Flow Calculations", startRow=1, x="Calculations from flow data")
   
-  writeData(wb,"Flow Calculations", startRow=3, x="7Q10 for complete timeframe")
-  writeData(wb,"Flow Calculations", startRow=3,startCol=2, x=sevenQten())
+  writeData(wb,"Flow Calculations", startRow=3, x="1Q10 for complete timeframe")
+  writeData(wb,"Flow Calculations", startRow=3,startCol=2, x=oneQten())
   
-  writeData(wb,"Flow Calculations", startRow=5, x= "30Q5 for complete timeframe")
-  writeData(wb,"Flow Calculations", startRow=5,startCol=2, x=thirtyQfive())
+  writeData(wb,"Flow Calculations", startRow=5, x="7Q10 for complete timeframe")
+  writeData(wb,"Flow Calculations", startRow=5,startCol=2, x=sevenQten())
   
-  writeData(wb,"Flow Calculations", startRow=7, x="harmonic mean for complete timeframe")
-  writeData(wb,"Flow Calculations", startRow=7,startCol=2, x=harmonic())
+  writeData(wb,"Flow Calculations", startRow=7, x= "30Q5 for complete timeframe")
+  writeData(wb,"Flow Calculations", startRow=7,startCol=2, x=thirtyQfive())
   
-  writeData(wb,"Flow Calculations", startRow=3, startCol=6, x="7Q10 and 30Q5 for each month of the year")
+  writeData(wb,"Flow Calculations", startRow=9, x="harmonic mean for complete timeframe")
+  writeData(wb,"Flow Calculations", startRow=9,startCol=2, x=harmonic())
+  
+  writeData(wb,"Flow Calculations", startRow=3, startCol=6, x="1Q10, 7Q10, and 30Q5 for each month of the year")
   writeDataTable(wb,"Flow Calculations", startRow=5, startCol=6, x=monthly(),tableStyle="none")
   
   wb
