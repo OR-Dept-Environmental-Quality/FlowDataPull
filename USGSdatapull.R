@@ -4,9 +4,9 @@ library(dataRetrieval)
 
 #step 1 - identify site of interest by its site ID
 
-#north santiam river at Niagra (14181500) and Big Cliff lake near Niagara (14181400)
+#north santiam river at Niagra (14181500)
 
-siteNumbers<-c("14181500","14181400")
+siteNumbers<-c("14181500","11501000","11486990","11502500","14211542")
 
 siteInfo<-readNWISsite(siteNumbers)
 
@@ -27,7 +27,7 @@ whatdat<-whatNWISdata(siteNumber=siteNumbers, service="dv")
 #00003 = mean
 #00008 = median
 
-dailydis<-readNWISdv(siteNumber=siteNumbers, parameterCd="00060", startDate = (Sys.Date()-3650), statCd=c('00001','00002','00003',"00008"))
+dailydis<-readNWISdv(siteNumber="14181400", parameterCd="00060", startDate = (Sys.Date()-3650), statCd=c('00001','00002','00003',"00008"))
 
 dailytemp<-readNWISdv(siteNumber=siteNumbers, parameterCd="00010", startDate=(Sys.Date()-3650), statCd=c('00001','00002','00003',"00008"))
 
@@ -54,6 +54,10 @@ ordepth<-whatNWISdata(stateCd="OR",parameterCd=depthparam)
 #compared with discharge? - have discharge data at 1,708 stations
 ordis<-whatNWISdata(stateCd="OR",parameterCd="00060")
 
+
+#get some data - can't through NWIS - must go through WQP...
+dailyveloc<-readWQPqw(siteNumber="USGS-11502500", parameterCd=velocparam)
+dailydepth<-readWQPqw(siteNumber='USGS-14206690', parameterCd=c("00064","72178","72199","82903", "85310","85311"))
 ###Lets do some calculations######
 
 #copying in the information from Vanessa and Ryan Michie so that we can calculate important MZ flow statistics such as 7Q10, 1Q10 and 30Q5
