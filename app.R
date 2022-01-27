@@ -42,7 +42,7 @@ ui<-fluidPage(
       
       #USGS station
       textInput("Station",
-      label=" USGS Station"),
+      label="USGS Station"),
     
       tags$em("Note: Flow calculations will be run on entire dataset selected"),
     
@@ -55,6 +55,16 @@ ui<-fluidPage(
       dateInput("endd",
               label = "Select End Date",
               min = '1900-1-1'),
+      
+      #seasonal specifications - have to put full date
+      tags$em("Specify any seasonal requirements here, default dates will automatically run the full water year"),
+      
+      textInput("startm",
+                label="Select season start (mm-dd)",
+                value = "10-01"),
+      textInput("endm",
+                label="Select season end (mm-dd)",
+                value = "09-30"),
       
       #add action button, so query doesn't run until button is clicked
       actionButton("goButton","Run Query"),
@@ -79,7 +89,15 @@ ui<-fluidPage(
               tabPanel("USGS Station Information",
                        DT::dataTableOutput("info")),
               
-              #original data
+              #velocity
+              tabPanel("Velocity Data",
+                       DT::dataTableOutput("velocity")),
+              
+              #depth
+              tabPanel("Depth Data",
+                      DT::dataTableOutput("depth")),
+              
+              #raw flow data
               tabPanel("USGS flow data",
                        DT::dataTableOutput("rawtable")),
               
@@ -92,7 +110,13 @@ ui<-fluidPage(
               
               #monthly calcs for 1Q10, 7Q10 and 30Q5
               tabPanel("Monthly 1Q10, 7Q10, and 30Q5",
-                       DT::dataTableOutput("monthlys"))
+                       DT::dataTableOutput("monthlys"),
+                       tags$em("February data does not include leap year days")),
+              
+              #seasonal calcs (specified by user)
+              tabPanel("Seasonal 1Q10, 7Q10, and 30Q5 as specified in sidebar",
+                       DT::dataTableOutput("seasonal"),
+                       tags$em("February data does not include leap year days"))
             )
   )
 ),
@@ -124,7 +148,7 @@ server<- function(input, output, session) {
     info()
   })
   
-  #get USGS data
+  #get USGS flow data
   data<-eventReactive(input$goButton, {
     
     #query data - returns mean daily flow in cfs
@@ -134,7 +158,7 @@ server<- function(input, output, session) {
                        endDate = toString(sprintf("%s",input$endd)),
                        statCd = "00003")
    
-    colnames(q.df)<-c("Agency","Station","Date","mean daily stream flow (cfs)","Data Quality")
+    if(nrow(q.df)!=0) {colnames(q.df)<-c("Agency","Station","Date","mean daily stream flow (cfs)","Data Quality")}
     
     q.df
   })
@@ -144,70 +168,134 @@ server<- function(input, output, session) {
    data()
  })
  
+ #get velocity data
+ velocity<-eventReactive(input$goButton, {
+   
+   q.df <- readWQPqw(siteNumbers = paste0('USGS-',toString(sprintf("%s",input$Station))),
+                      parameterCd = c("00055","70232", '72149', '72168',"72169","72190","72254","72255","72294","72321",
+                                    "72322","72323","81380","81904"),
+                     startDate =toString(sprintf("%s",input$startd)),
+                      endDate = toString(sprintf("%s",input$endd))
+                      )
+   
+   q.df<-select(q.df,OrganizationIdentifier, OrganizationFormalName,ActivityIdentifier,ActivityTypeCode,ActivityMediaName,
+                ActivityMediaSubdivisionName,ActivityStartDate,ActivityStartTime.Time,ActivityStartTime.TimeZoneCode,
+                ActivityConductingOrganizationText,MonitoringLocationIdentifier,HydrologicCondition,HydrologicEvent, 
+                SampleCollectionMethod.MethodIdentifier,SampleCollectionMethod.MethodName, SampleCollectionEquipmentName,
+                CharacteristicName,ResultMeasureValue,ResultMeasure.MeasureUnitCode,ResultStatusIdentifier,
+                StatisticalBaseCode,ResultValueTypeName)
+
+   
+   q.df
+ })
+ 
+ #table of queried velocity data for shiny app view
+ output$velocity<-renderDataTable({
+   velocity()
+ })
+ 
+ #get depth data
+ depth<-eventReactive(input$goButton, {
+   
+   q.df <- readWQPqw(siteNumbers = paste0('USGS-',toString(sprintf("%s",input$Station))),
+                       parameterCd = c("00064","72178","72199","82903", "85310","85311"),
+                      startDate =toString(sprintf("%s",input$startd)),
+                      endDate = toString(sprintf("%s",input$endd)))
+   
+   q.df<-select(q.df,OrganizationIdentifier, OrganizationFormalName,ActivityIdentifier,ActivityTypeCode,ActivityMediaName,
+                ActivityMediaSubdivisionName,ActivityStartDate,ActivityStartTime.Time,ActivityStartTime.TimeZoneCode,
+                ActivityConductingOrganizationText,MonitoringLocationIdentifier,HydrologicCondition,HydrologicEvent, 
+                SampleCollectionMethod.MethodIdentifier,SampleCollectionMethod.MethodName,SampleCollectionEquipmentName,
+                CharacteristicName,ResultMeasureValue,ResultMeasure.MeasureUnitCode,ResultStatusIdentifier,
+                StatisticalBaseCode,ResultValueTypeName)
+   
+   q.df
+ })
+ 
+ #table of queried depth data for shiny app view
+ output$depth<-renderDataTable({
+   depth()
+ })
+ 
  #calculate the total flow stats for 1Q10, 7Q10, 30Q5, and harmonic mean flow
- oneQten<-eventReactive(input$goButton, {
-   q.df<-data()
+ oneQten<-eventReactive(input$goButton, { if(nrow(data())!=0)
+  { q.df<-data()
    q <- q.df[,c(3,4)]
    colnames(q) <-c("date", "flow")
    q$date <- as.POSIXct(q$date, format="%Y-%m-%d")
    
    one<-dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="10-01", wyend="09-30")
+   }
+   
+   else {one<-paste0("No flow data")}
    
    one
  })
  
  
- sevenQten<-eventReactive(input$goButton, {
-   q.df<-data()
+ sevenQten<-eventReactive(input$goButton, {if(nrow(data())!=0)
+   {q.df<-data()
    q <- q.df[,c(3,4)]
    colnames(q) <-c("date", "flow")
    q$date <- as.POSIXct(q$date, format="%Y-%m-%d")
    
    seven<-dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart="10-01", wyend="09-30")
+  }
+   
+   else {seven<-paste0("No flow data")}
    
    seven
  })
    
    
- thirtyQfive<-eventReactive(input$goButton, {
-   q.df<-data()
+ thirtyQfive<-eventReactive(input$goButton, {if(nrow(data())!=0)
+   {q.df<-data()
    q <- q.df[,c(3,4)]
    colnames(q) <-c("date", "flow")
    q$date <- as.POSIXct(q$date, format="%Y-%m-%d")
    
    thirty<-dflow(x=q, m=30, r=5, yearstart=NA, yearend=NA, wystart="10-01", wyend="09-30")
+   }
+   
+   else {thirty<-paste0("No flow data")}
    
    thirty
  })
 
  
- harmonic<-eventReactive(input$goButton, {
-   q.df<-data()
+ harmonic<-eventReactive(input$goButton, {if(nrow(data())!=0) 
+   {q.df<-data()
    q <- q.df[,4]
    
    harmonic<-dharmonic(q)
+ }
+  else{harmonic<-paste0("No flow data")} 
    
    harmonic
  })       
  
  #data for shiny app view
  output$oneQten<-renderText({
-   paste0("1Q10: ",round(oneQten(),digits=2))
+   if(nrow(data())!=0) {paste0("1Q10: ",round(oneQten(),digits=2))}
+   else{paste0("1Q10: ",oneQten())}
  })
  output$sevenQten<-renderText({
-   paste0("7Q10: ",round(sevenQten(),digits=2))
+   if(nrow(data())!=0) {paste0("7Q10: ",round(sevenQten(),digits=2))}
+   else{paste0("1Q10: ",sevenQten())}
  })
  output$thirtyQfive<-renderText({
-   paste0("30Q5: ",round(thirtyQfive(),digits=2))
+   if(nrow(data())!=0) {paste0("30Q5: ",round(thirtyQfive(),digits=2))}
+   else{paste0("1Q10: ",thirtyQfive())}
  })
  output$harmonic<-renderText({
-   paste0("Harmonic Mean: ",round(harmonic(),digits=2))
+   if(nrow(data())!=0) {paste0("Harmonic Mean: ",round(harmonic(),digits=2))}
+   else{paste0("1Q10: ",harmonic())}
  })
               
 #calculate monthly 1Q10s, 7Q10s, and 30Q5s - merge into one dataframe
  #note that monthly flows for february will exclude a leap year day
  
- monthly<-eventReactive(input$goButton, {
+ monthly<-eventReactive(input$goButton, {if(nrow(data())!=0){
    q<-data()
    q <- q[,c(3,4)]
    colnames(q) <-c("date", "flow")
@@ -260,6 +348,8 @@ server<- function(input, output, session) {
    thirtys<-c(jan30,feb30,mar30,apr30,may30,jun30,jul30,aug30,sep30,oct30,nov30,dec30)
    
    monthly<-data.frame("Month"=months,"1Q10"=ones,"7Q10"=sevens,"30Q5"=thirtys)
+ }
+   else {monthly<-data.frame(No.Flow.Data=character())}
    
    monthly
    
@@ -271,7 +361,33 @@ server<- function(input, output, session) {
    
    monthly
  })
-              
+ 
+ #do seasonal calculations for 1Q10, 7Q10, and 30Q5
+ seasonal<-eventReactive(input$goButton, {if(nrow(data())!=0){
+   
+ q.df<-data()
+ q <- q.df[,c(3,4)]
+ colnames(q) <-c("date", "flow")
+ q$date <- as.POSIXct(q$date, format="%Y-%m-%d")
+ 
+ seas1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart=input$startm, wyend=input$endm),digits=2)
+ seas7<-round(dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart=input$startm, wyend=input$endm),digits=2)
+ seas30<-round(dflow(x=q, m=30, r=5, yearstart=NA, yearend=NA, wystart=input$startm, wyend=input$endm),digits=2)
+ 
+ #combine into df
+ seasonal<-data.frame("1Q10"=seas1,"7Q10"=seas7,"30Q5"=seas30)}
+   
+ else {seasonal<-data.frame(No.Flow.Data=character())}
+ 
+ seasonal
+ 
+ })
+ 
+ #data for shiny app view
+ output$seasonal<-renderDataTable({
+   seasonal()
+ })
+ 
 ##### Excel Output ####
  
 #want a page with query, page with raw data, page with flow calcs (can probably put all flow cals on one page)
@@ -287,6 +403,8 @@ param<-eventReactive(input$goButton, {
   stations<- paste0("Stations = ",toString(sprintf("'%s'", input$Station)))
   startdt<-paste0("Startdate = ",toString(sprintf("%s",input$startd)))
   enddt<-paste0("Enddate = ",toString(sprintf("%s",input$endd)))
+  startmm<-paste0("Start Season = ",toString(sprintf("%s",input$startm)))
+  endmm<-paste0("End Season = ",toString(sprintf("%s",input$endm)))
   
   addWorksheet(wb,"Search Criteria")
   
@@ -300,8 +418,10 @@ param<-eventReactive(input$goButton, {
   writeData(wb,sheet="Search Criteria",x=stations,startRow=4,startCol=1)
   writeData(wb,sheet="Search Criteria",x=startdt,startRow=5,startCol=1)
   writeData(wb,sheet="Search Criteria",x=enddt,startRow=6,startCol=1)
+  writeData(wb,sheet="Search Criteria",x=startmm,startRow=7,startCol=1)
+  writeData(wb,sheet="Search Criteria",x=endmm,startRow=8,startCol=1)
   
-  writeDataTable(wb,sheet="Search Criteria",x=info(),startRow=8,tableStyle="none")
+  writeDataTable(wb,sheet="Search Criteria",x=info(),startRow=9,tableStyle="none")
   
   ##raw data sheet
   
@@ -329,6 +449,19 @@ param<-eventReactive(input$goButton, {
   
   writeData(wb,"Flow Calculations", startRow=3, startCol=6, x="1Q10, 7Q10, and 30Q5 for each month of the year")
   writeDataTable(wb,"Flow Calculations", startRow=5, startCol=6, x=monthly(),tableStyle="none")
+  
+  writeData(wb,"Flow Calculations", startRow=3, startCol=12, x="1Q10, 7Q10, and 30Q5 for season specified")
+  writeData(wb,"Flow Calculations", startRow=4, startCol=12, x=startmm)
+  writeData(wb,"Flow Calculations", startRow=5, startCol=12, x=endmm)
+  writeDataTable(wb,"Flow Calculations", startRow=6, startCol=12, x=seasonal(),tableStyle="none")
+  
+  #velocity data sheet
+  addWorksheet(wb,"Velocity")
+  writeDataTable(wb,"Velocity",startRow=2,x=velocity(),tableStyle="none")
+  
+  #depth data sheet
+  addWorksheet(wb,"Depth")
+  writeDataTable(wb,"Depth",startRow=2,x=depth(),tableStyle="none")
   
   wb
 })
