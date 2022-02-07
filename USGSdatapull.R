@@ -4,9 +4,9 @@ library(dataRetrieval)
 
 #step 1 - identify site of interest by its site ID
 
-#north santiam river at Niagra (14181500) and Big Cliff lake near Niagara (14181400)
+#north santiam river at Niagra (14181500)
 
-siteNumbers<-c("14181500","14181400")
+siteNumbers<-c("14181500","11501000","11486990","11502500","14211542")
 
 siteInfo<-readNWISsite(siteNumbers)
 
@@ -27,7 +27,7 @@ whatdat<-whatNWISdata(siteNumber=siteNumbers, service="dv")
 #00003 = mean
 #00008 = median
 
-dailydis<-readNWISdv(siteNumber=siteNumbers, parameterCd="00060", startDate = (Sys.Date()-3650), statCd=c('00001','00002','00003',"00008"))
+dailydis<-readNWISdv(siteNumber="14181400", parameterCd="00060", startDate = (Sys.Date()-3650), statCd=c('00001','00002','00003',"00008"))
 
 dailytemp<-readNWISdv(siteNumber=siteNumbers, parameterCd="00010", startDate=(Sys.Date()-3650), statCd=c('00001','00002','00003',"00008"))
 
@@ -54,6 +54,10 @@ ordepth<-whatNWISdata(stateCd="OR",parameterCd=depthparam)
 #compared with discharge? - have discharge data at 1,708 stations
 ordis<-whatNWISdata(stateCd="OR",parameterCd="00060")
 
+
+#get some data - can't through NWIS - must go through WQP...
+dailyveloc<-readWQPqw(siteNumber="USGS-11502500", parameterCd=velocparam)
+dailydepth<-readWQPqw(siteNumber='USGS-14206690', parameterCd=c("00064","72178","72199","82903", "85310","85311"))
 ###Lets do some calculations######
 
 #copying in the information from Vanessa and Ryan Michie so that we can calculate important MZ flow statistics such as 7Q10, 1Q10 and 30Q5
@@ -72,11 +76,13 @@ library(dflowR)
 
 #--- USGS web download example ------------------------------------------------------------------------------------
 
+#if you want a station with a patchier dataset, try USGS gauge 12118500
+
 # download
 q.df <- readNWISdv(siteNumbers = "14174000",
                    parameterCd = "00060",
                    startDate = "1970-10-01",
-                   endDate = "2016-09-30",
+                   endDate = "2022-01-30",
                    statCd = "00003")
 
 # Just get columns 3 and 4 (date and flow)
@@ -145,4 +151,37 @@ dharmonic(r)
 #function worked, though won't be able to verify against DFLOW until I speak more with Steve and Erich
 
 
+#flow plot
+library(ggplot2)
 
+F1 <- ggplot(q, aes(x = date, y = flow)) +
+  geom_line() +
+  scale_x_datetime(date_breaks="5 years", date_labels="%Y") +
+  theme_bw() +
+  theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(), 
+        legend.position = "none") +
+  labs(y = "Mean Daily Discharge (cfs)", x = "") +
+  scale_color_brewer(palette = "Set1")
+F1
+
+
+#monthly mean boxplots
+q$Month<-format(q$date,"%b")
+q$Month<-factor(q$Month, levels=month.abb)
+
+Box1 <- ggplot(q, aes(x = Month, y = flow)) +
+  geom_boxplot() +
+  stat_summary(fun = mean, geom ="point", shape = 20, size=3, color ="red", fill ="red") +
+  theme_bw() +
+  theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(),
+        legend.position = "none") +
+  labs(y = "Discharge (cfs)", x = "") +
+  ggtitle("Boxplots of mean monthly flow") +
+  scale_color_brewer(palette = "Set1")
+Box1
+
+#figure out any missing dates
+q$asDate<-as.Date(q$date)
+DateRange<-seq(min(q$asDate),max(q$asDate),by=1)
+Missing<-DateRange[!DateRange %in% q$asDate]
+df<-data.frame(Missing)
