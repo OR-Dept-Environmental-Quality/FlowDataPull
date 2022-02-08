@@ -28,6 +28,9 @@ dharmonic<-function(x) {
   
 }
 
+#OWRD data pull function
+source("OWRDdatapull.R")
+
 # no valid values to query, user will need to know which USGS station they need in advance at the moment
 
 #############################Define UI##########################
@@ -39,11 +42,17 @@ ui<-fluidPage(
       
       #add warning
       
-      tags$em("Warning: Current code only handles one USGS station at a time. If you want data for more than one station, please complete query and download the data separately"),
+      tags$em("Warning: Current code only handles ONE station at a time. If you want data for more than one station, please complete query and download the data separately"),
       
-      #USGS station
+      #stations
+      selectizeInput("type",
+                     "Select Station Type",
+                     choices=c("USGS","OWRD"),
+                     multiple=FALSE),
+      
+      #station number
       textInput("Station",
-      label="USGS Station"),
+      label="Station Number"),
     
       tags$em("Note: Flow calculations will be run on entire dataset selected"),
     
@@ -79,7 +88,8 @@ ui<-fluidPage(
             h3("All data is in cfs and all flow values are mean daily stream flow"),
             h3("Water years with any data missing are excluded from flow calculation analyses"),
             tags$a(href="https://dashboard.waterdata.usgs.gov/app/nwd/?region=lower48&aoi=default","Click here to find sites at the USGS National Water Dashboard",target="_blank"),
-            
+            tags$br(),
+            tags$a(href="https://apps.wrd.state.or.us/apps/sw/hydro_report/","Click here to find OWRD historical streamflow data"),
             
             #add line
             tags$hr(),
@@ -89,24 +99,27 @@ ui<-fluidPage(
             #multiple tabs: station info, original data, total calcs, and monthly calcs
             tabsetPanel(
               
-              #station info
+              #USGS station info
               tabPanel("USGS Station Information",
+                       h4("Station Information available only for USGS stations, not for OWRD stations"),
                        DT::dataTableOutput("info")),
               
               #velocity
               tabPanel("Velocity Data",
+                       h4("Velocity data available only for USGS stations, not for OWRD stations"),
                        DT::dataTableOutput("velocity")),
               
               #depth
               tabPanel("Depth Data",
+                       h4("Depth Data available only for USGS stations, not for OWRD stations"),
                       DT::dataTableOutput("depth")),
               
               #raw flow data
-              tabPanel("USGS flow data",
+              tabPanel("Flow data",
                        DT::dataTableOutput("rawtable")),
               
               #plot of flow
-              tabPanel("USGS flow graph",
+              tabPanel("Flow graph",
                        plotOutput("flowplot")),
               
               #monthly boxplots
@@ -167,11 +180,17 @@ server<- function(input, output, session) {
   
   #get station information
   info<-eventReactive(input$goButton, {
+    
+    if(input$type=="USGS"){
     info<-readNWISsite(input$Station)
     
     sub<-select(info, agency_cd,site_no,station_nm,dec_lat_va,dec_long_va,huc_cd)
     
     colnames(sub)<-c("Agency","Station","Name","Latitude","Longitude","HUC")
+    
+    sub}
+    
+    else{sub<-data.frame(No.Station.Data=character())}
     
     sub
   })
@@ -184,16 +203,32 @@ server<- function(input, output, session) {
   #get USGS flow data
   data<-eventReactive(input$goButton, {
     
+    if(input$type=="USGS") {
     #query data - returns mean daily flow in cfs
     q.df <- readNWISdv(siteNumbers = toString(sprintf("%s",input$Station)),
                        parameterCd = "00060",
                        startDate =toString(sprintf("%s",input$startd)),
                        endDate = toString(sprintf("%s",input$endd)),
                        statCd = "00003")
-   
-    if(nrow(q.df)!=0) {colnames(q.df)<-c("Agency","Station","Date","mean daily stream flow (cfs)","Data Quality")}
     
-    q.df
+    q <- q.df[,c(3,4,5)]
+    colnames(q) <-c("date", "flow","status")
+    q$date <- as.POSIXct(q$date, format="%Y-%m-%d")
+    }
+    
+    else{
+      #query OWRD
+      q.df<-owrd_data(station=toString(sprintf("%s",input$Station)),
+                         startdate=toString(sprintf("%s",input$startd)),
+                         enddate=toString(sprintf("%s",input$endd)),
+                         char="MDF")
+    p <- q.df[,c(2,5,8)]
+    colnames(p) <-c("date", "flow","status")
+    p$date <- as.POSIXct(p$date, format="%m-%d-%Y")
+    q<-as.data.frame(p)
+    }
+    
+    q
   })
  
  #table of queried raw data for shiny app view
@@ -204,10 +239,7 @@ server<- function(input, output, session) {
  
  #get line plot of data
 flowplot<-eventReactive(input$goButton, {
-   q.df<-data()
-   q <- q.df[,c(3,4)]
-   colnames(q) <-c("date", "flow")
-   q$date <- as.POSIXct(q$date, format="%Y-%m-%d")
+   q<-data()
    
    ggplot(q, aes(x = date, y = flow)) +
      geom_line() +
@@ -225,10 +257,7 @@ output$flowplot<-renderPlot({
 
 ##make boxplots of data
 boxplot<-eventReactive(input$goButton, {
-  q.df<-data()
-  q <- q.df[,c(3,4)]
-  colnames(q) <-c("date", "flow")
-  q$date <- as.POSIXct(q$date, format="%Y-%m-%d")
+  q<-data()
   
 q$Month<-format(q$date,"%b")
 q$Month<-factor(q$Month, levels=month.abb)
@@ -251,7 +280,7 @@ output$boxplot<-renderPlot({
  
  
  #get velocity data
- velocity<-eventReactive(input$goButton, {
+ velocity<-eventReactive(input$goButton, { if(input$type=="USGS"){
    
    q.df <- readWQPqw(siteNumbers = paste0('USGS-',toString(sprintf("%s",input$Station))),
                       parameterCd = c("00055","70232", '72149', '72168',"72169","72190","72254","72255","72294","72321",
@@ -266,7 +295,9 @@ output$boxplot<-renderPlot({
                 SampleCollectionMethod.MethodIdentifier,SampleCollectionMethod.MethodName, SampleCollectionEquipmentName,
                 CharacteristicName,ResultMeasureValue,ResultMeasure.MeasureUnitCode,ResultStatusIdentifier,
                 StatisticalBaseCode,ResultValueTypeName)
-
+ }
+   
+   else {q.df<-data.frame(No.Velocity.Data=character())}
    
    q.df
  })
@@ -277,7 +308,7 @@ output$boxplot<-renderPlot({
  })
  
  #get depth data
- depth<-eventReactive(input$goButton, {
+ depth<-eventReactive(input$goButton, {if(input$type=="USGS"){
    
    q.df <- readWQPqw(siteNumbers = paste0('USGS-',toString(sprintf("%s",input$Station))),
                        parameterCd = c("00064","72178","72199","82903", "85310","85311"),
@@ -290,6 +321,8 @@ output$boxplot<-renderPlot({
                 SampleCollectionMethod.MethodIdentifier,SampleCollectionMethod.MethodName,SampleCollectionEquipmentName,
                 CharacteristicName,ResultMeasureValue,ResultMeasure.MeasureUnitCode,ResultStatusIdentifier,
                 StatisticalBaseCode,ResultValueTypeName)
+ }
+   else {q.df<-data.frame(No.Depth.Data=character())}
    
    q.df
  })
@@ -301,10 +334,7 @@ output$boxplot<-renderPlot({
  
  #calculate the total flow stats for 1Q10, 7Q10, 30Q5, and harmonic mean flow
  oneQten<-eventReactive(input$goButton, { if(nrow(data())!=0)
-  { q.df<-data()
-   q <- q.df[,c(3,4)]
-   colnames(q) <-c("date", "flow")
-   q$date <- as.POSIXct(q$date, format="%Y-%m-%d")
+  { q<-data()[,c(1,2)]
    
    one<-dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="10-01", wyend="09-30")
    }
@@ -316,10 +346,7 @@ output$boxplot<-renderPlot({
  
  
  sevenQten<-eventReactive(input$goButton, {if(nrow(data())!=0)
-   {q.df<-data()
-   q <- q.df[,c(3,4)]
-   colnames(q) <-c("date", "flow")
-   q$date <- as.POSIXct(q$date, format="%Y-%m-%d")
+   {q<-data()[,c(1,2)]
    
    seven<-dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart="10-01", wyend="09-30")
   }
@@ -331,10 +358,7 @@ output$boxplot<-renderPlot({
    
    
  thirtyQfive<-eventReactive(input$goButton, {if(nrow(data())!=0)
-   {q.df<-data()
-   q <- q.df[,c(3,4)]
-   colnames(q) <-c("date", "flow")
-   q$date <- as.POSIXct(q$date, format="%Y-%m-%d")
+   {q<-data()[,c(1,2)]
    
    thirty<-dflow(x=q, m=30, r=5, yearstart=NA, yearend=NA, wystart="10-01", wyend="09-30")
    }
@@ -347,7 +371,7 @@ output$boxplot<-renderPlot({
  
  harmonic<-eventReactive(input$goButton, {if(nrow(data())!=0) 
    {q.df<-data()
-   q <- q.df[,4]
+   q <- q.df[,2]
    
    harmonic<-dharmonic(q)
  }
@@ -378,10 +402,7 @@ output$boxplot<-renderPlot({
  #note that monthly flows for february will exclude a leap year day
  
  monthly<-eventReactive(input$goButton, {if(nrow(data())!=0){
-   q<-data()
-   q <- q[,c(3,4)]
-   colnames(q) <-c("date", "flow")
-   q$date <- as.POSIXct(q$date, format="%Y-%m-%d")
+   q<-data()[,c(1,2)]
    
    #calculate monthly dflow for 7Q10 and 30Q5
    jan1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="01-01", wyend="01-31"),digits=0)
@@ -447,10 +468,7 @@ output$boxplot<-renderPlot({
  #do seasonal calculations for 1Q10, 7Q10, and 30Q5
  seasonal<-eventReactive(input$goButton, {if(nrow(data())!=0){
    
- q.df<-data()
- q <- q.df[,c(3,4)]
- colnames(q) <-c("date", "flow")
- q$date <- as.POSIXct(q$date, format="%Y-%m-%d")
+ q<-data()[,c(1,2)]
  
  seas1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart=input$startm, wyend=input$endm),digits=0)
  seas7<-round(dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart=input$startm, wyend=input$endm),digits=0)
@@ -472,15 +490,18 @@ output$boxplot<-renderPlot({
  
  #report on missing flow dates
  missing<-eventReactive(input$goButton, {if(nrow(data())!=0) {
-   q.df<-data()
-   q <- q.df[,c(3,4)]
-   colnames(q) <-c("date", "flow")
-   q$date <- as.POSIXct(q$date, format="%Y-%m-%d")
+   
+   if(input$type=="USGS"){q<-data()
    
    q$asDate<-as.Date(q$date)
    DateRange<-seq(min(q$asDate),max(q$asDate),by=1)
    Missing<-DateRange[!DateRange %in% q$asDate]
-   framemissing<-data.frame(Missing)}
+   framemissing<-data.frame(Missing)
+   }
+   
+   else{framemissing<-subset(data(),is.na(data()$flow))}
+   
+ }
    
    else{framemissing<-data.frame(No.Flow.Data=character())}
    
@@ -504,6 +525,7 @@ param<-eventReactive(input$goButton, {
   wb<-createWorkbook()
   
   #create strings for input parameters
+  type<-paste0("Station Type = ",toString(sprintf("'%s'", input$type)))
   stations<- paste0("Stations = ",toString(sprintf("'%s'", input$Station)))
   startdt<-paste0("Startdate = ",toString(sprintf("%s",input$startd)))
   enddt<-paste0("Enddate = ",toString(sprintf("%s",input$endd)))
@@ -519,13 +541,14 @@ param<-eventReactive(input$goButton, {
   querydate<-paste0("Date of query, ",Sys.Date())
   writeData(wb,sheet="Search Criteria",x=querydate,startRow=2,startCol=1)
   
-  writeData(wb,sheet="Search Criteria",x=stations,startRow=4,startCol=1)
-  writeData(wb,sheet="Search Criteria",x=startdt,startRow=5,startCol=1)
-  writeData(wb,sheet="Search Criteria",x=enddt,startRow=6,startCol=1)
-  writeData(wb,sheet="Search Criteria",x=startmm,startRow=7,startCol=1)
-  writeData(wb,sheet="Search Criteria",x=endmm,startRow=8,startCol=1)
+  writeData(wb,sheet="Search Criteria",x=type,startRow=4,startCol=1)
+  writeData(wb,sheet="Search Criteria",x=stations,startRow=5,startCol=1)
+  writeData(wb,sheet="Search Criteria",x=startdt,startRow=6,startCol=1)
+  writeData(wb,sheet="Search Criteria",x=enddt,startRow=7,startCol=1)
+  writeData(wb,sheet="Search Criteria",x=startmm,startRow=8,startCol=1)
+  writeData(wb,sheet="Search Criteria",x=endmm,startRow=9,startCol=1)
   
-  writeDataTable(wb,sheet="Search Criteria",x=info(),startRow=9,tableStyle="none")
+  writeDataTable(wb,sheet="Search Criteria",x=info(),startRow=11,tableStyle="none")
   
   ##raw data sheet
   
@@ -582,9 +605,9 @@ param<-eventReactive(input$goButton, {
   
   #add missing data sheet
   addWorksheet(wb,"Missing Flow")
-  writeData(wb,"Missing Flow",startrow=1,x="Data without flow information during the specified search window")
-  writeData(wb,"Missing Flow",startrow=2,x="Water years with missing data are excluded from flow calculation analyses")
-  writeDataTable(wb,"Missing Flow",startrow=3,x=missing(),tableStyle="none")
+  writeData(wb,"Missing Flow",startRow=1,x="Data without flow information during the specified search window")
+  writeData(wb,"Missing Flow",startRow=2,x="Water years with missing data are excluded from flow calculation analyses")
+  writeDataTable(wb,"Missing Flow",startRow=3,x=missing(),tableStyle="none")
   
   wb
 })
