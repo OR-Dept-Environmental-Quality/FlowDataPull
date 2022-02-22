@@ -59,7 +59,7 @@ ui<-fluidPage(
        # Start Date (make start date thirty years ago as default)
       dateInput("startd",
               label = "Select Start Date",
-              min = '1949-09-15',
+              min = '1900-01-01',
               value = Sys.Date()-10950),
        # End date
       dateInput("endd",
@@ -120,15 +120,17 @@ ui<-fluidPage(
               
               #plot of flow
               tabPanel("Flow graph",
+                       tags$em("Y axis is in log scale"),
                        plotOutput("flowplot")),
               
               #monthly boxplots
               tabPanel("Mean Monthly Flow Boxplots",
                        plotOutput("boxplot"),
-                       tags$em("Boxplots represent median and interquartile range (1st - 3rd quartiles). 
+                       tags$em("Y axis is in log scale. Boxplots represent median and interquartile range (1st - 3rd quartiles). 
                                Minimum and maximum, shown as whiskers, represent values within 1.5 times the interquartile range. 
                                Outliers are greater than 1.5 but less than 3 times the interquartile range.
                                Red points are mean monthly flow.")),
+                       
               
               #total 1Q10, 7Q10, 30Q5, and harmonic mean flow for time range specified
               tabPanel("Flow Calculations for all data",
@@ -244,6 +246,7 @@ flowplot<-eventReactive(input$goButton, {
    ggplot(q, aes(x = date, y = flow)) +
      geom_line() +
      scale_x_datetime(date_breaks="2 years", date_labels="%Y") +
+     scale_y_continuous(trans = 'log10')+ 
      theme_bw() +
      theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(), 
            legend.position = "none") +
@@ -265,6 +268,7 @@ q$Month<-factor(q$Month, levels=month.abb)
 ggplot(q, aes(x = Month, y = flow)) +
   geom_boxplot() +
   stat_summary(fun = mean, geom ="point", shape = 20, size=3, color ="red", fill ="red") +
+  scale_y_continuous(trans = 'log10')+ 
   theme_bw() +
   theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(),
         legend.position = "none") +
@@ -561,14 +565,18 @@ param<-eventReactive(input$goButton, {
   addWorksheet(wb,"Graphs")
   
   #flow plot
-
+  png("flowplot.png")
   print(flowplot())
-  insertPlot(wb,"Graphs",startRow=3, startCol=1,fileType="png")
+  dev.off()
+  insertImage(wb,"Graphs","flowplot.png",startRow=3, startCol=1)
+  writeData(wb,"Graphs",startRow=1,startCol=1,x="Y axis is in log scale")
   
   #boxplot
+  png("boxplot.png")
   print(boxplot())
-  insertPlot(wb,"Graphs",startRow=3, startCol=10,fileType='png')
-  writeData(wb,"Graphs",startRow=1,startCol=10,x="Boxplots represent median and interquartile range (1st - 3rd quartiles). Minimum and maximum, shown as whiskers, represent values within 1.5 times the interquartile range.  Outliers are greater than 1.5 but less than 3 times the interquartile range. Red points are mean monthly flow.")
+  dev.off()
+  insertImage(wb,"Graphs","boxplot.png",startRow=3, startCol=10)
+  writeData(wb,"Graphs",startRow=1,startCol=10,x="Y axis is in log scale. Boxplots represent median and interquartile range (1st - 3rd quartiles). Minimum and maximum, shown as whiskers, represent values within 1.5 times the interquartile range.  Outliers are greater than 1.5 but less than 3 times the interquartile range. Red points are mean monthly flow.")
   
   ## flow calc data sheet
   addWorksheet(wb,"Flow Calculations")
