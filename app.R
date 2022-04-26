@@ -246,7 +246,7 @@ flowplot<-eventReactive(input$goButton, {
    ggplot(q, aes(x = date, y = flow)) +
      geom_line() +
      scale_x_datetime(date_breaks="2 years", date_labels="%Y") +
-     scale_y_continuous(trans = 'log10')+ 
+     scale_y_continuous(labels=scales::label_number(),trans = 'log10')+ 
      theme_bw() +
      theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(), 
            legend.position = "none") +
@@ -268,7 +268,7 @@ q$Month<-factor(q$Month, levels=month.abb)
 ggplot(q, aes(x = Month, y = flow)) +
   geom_boxplot() +
   stat_summary(fun = mean, geom ="point", shape = 20, size=3, color ="red", fill ="red") +
-  scale_y_continuous(trans = 'log10')+ 
+  scale_y_continuous(labels=scales::label_number(),trans = 'log10')+ 
   theme_bw() +
   theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(),
         legend.position = "none") +
