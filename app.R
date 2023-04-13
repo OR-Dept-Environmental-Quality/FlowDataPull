@@ -390,19 +390,19 @@ output$boxplot<-renderPlot({
  
  #data for shiny app view
  output$oneQten<-renderText({
-   if(nrow(data())!=0) {paste0("1Q10: ",round(oneQten(),digits=0))}
+   if(nrow(data())!=0) {paste0("1Q10: ",round(oneQten(),digits=3))}
    else{paste0("1Q10: ",oneQten())}
  })
  output$sevenQten<-renderText({
-   if(nrow(data())!=0) {paste0("7Q10: ",round(sevenQten(),digits=0))}
+   if(nrow(data())!=0) {paste0("7Q10: ",round(sevenQten(),digits=3))}
    else{paste0("1Q10: ",sevenQten())}
  })
  output$thirtyQfive<-renderText({
-   if(nrow(data())!=0) {paste0("30Q5: ",round(thirtyQfive(),digits=0))}
+   if(nrow(data())!=0) {paste0("30Q5: ",round(thirtyQfive(),digits=3))}
    else{paste0("1Q10: ",thirtyQfive())}
  })
  output$harmonic<-renderText({
-   if(nrow(data())!=0) {paste0("Harmonic Mean: ",round(harmonic(),digits=0))}
+   if(nrow(data())!=0) {paste0("Harmonic Mean: ",round(harmonic(),digits=3))}
    else{paste0("1Q10: ",harmonic())}
  })
               
@@ -478,9 +478,9 @@ output$boxplot<-renderPlot({
    
  q<-data()[,c(1,2)]
  
- seas1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart=input$startm, wyend=input$endm),digits=2)
- seas7<-round(dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart=input$startm, wyend=input$endm),digits=2)
- seas30<-round(dflow(x=q, m=30, r=5, yearstart=NA, yearend=NA, wystart=input$startm, wyend=input$endm),digits=2)
+ seas1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart=input$startm, wyend=input$endm),digits=4)
+ seas7<-round(dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart=input$startm, wyend=input$endm),digits=4)
+ seas30<-round(dflow(x=q, m=30, r=5, yearstart=NA, yearend=NA, wystart=input$startm, wyend=input$endm),digits=4)
  
  #combine into df
  seasonal<-data.frame("1Q10"=seas1,"7Q10"=seas7,"30Q5"=seas30)}
