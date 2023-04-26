@@ -1,3 +1,7 @@
+.libPaths('C:/Users/epricha/Documents/R/lib')
+#devtools::install_github('OR-Dept-Environmental-Quality/dflowR', 
+                         #host = 'https://api.github.com', 
+                         #dependencies= TRUE, force = TRUE, upgrade='never')
 #create shiny app to pull USGS data and automatically calculate the 7Q10, 30Q5, and harmonic mean flow
 #over a selectd time period
 
@@ -71,10 +75,10 @@ ui<-fluidPage(
       
       textInput("startm",
                 label="Select season start (mm-dd)",
-                value = "10-01"),
+                value = "04-01"),
       textInput("endm",
                 label="Select season end (mm-dd)",
-                value = "09-30"),
+                value = "03-31"),
       
       #add action button, so query doesn't run until button is clicked
       actionButton("goButton","Run Query"),
@@ -132,20 +136,21 @@ ui<-fluidPage(
                                Red points are mean monthly flow.")),
                        
               
-              #total 1Q10, 7Q10, 30Q5, and harmonic mean flow for time range specified
+              #total 1Q10, 7Q10, 14Q3, 30Q5, and harmonic mean flow for time range specified
               tabPanel("Flow Calculations for all data",
                        textOutput("oneQten"),
                        textOutput("sevenQten"),
+                       textOutput("fourteenQthree"),
                        textOutput("thirtyQfive"),
                        textOutput("harmonic")),
               
-              #monthly calcs for 1Q10, 7Q10 and 30Q5
-              tabPanel("Monthly 1Q10, 7Q10, and 30Q5",
+              #monthly calcs for 1Q10, 7Q10, 14Q3, and 30Q5
+              tabPanel("Monthly 1Q10, 7Q10, 14Q3, and 30Q5",
                        DT::dataTableOutput("monthlys"),
                        tags$em("February data does not include leap year days")),
               
               #seasonal calcs (specified by user)
-              tabPanel("Seasonal 1Q10, 7Q10, and 30Q5",
+              tabPanel("Seasonal 1Q10, 7Q10, 14Q3, and 30Q5",
                        DT::dataTableOutput("seasonal"),
                        tags$em("Seasons are specified in sidebar. "),
                        tags$em("February data does not include leap year days")),
@@ -336,11 +341,11 @@ output$boxplot<-renderPlot({
    depth()
  })
  
- #calculate the total flow stats for 1Q10, 7Q10, 30Q5, and harmonic mean flow
+ #calculate the total flow stats for 1Q10, 7Q10, 14Q3, 30Q5, and harmonic mean flow
  oneQten<-eventReactive(input$goButton, { if(nrow(data())!=0)
   { q<-data()[,c(1,2)]
    
-   one<-dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="10-01", wyend="09-30")
+   one<-dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="04-01", wyend="03-31")
    }
    
    else {one<-paste0("No flow data")}
@@ -348,23 +353,35 @@ output$boxplot<-renderPlot({
    one
  })
  
- 
+
  sevenQten<-eventReactive(input$goButton, {if(nrow(data())!=0)
    {q<-data()[,c(1,2)]
    
-   seven<-dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart="10-01", wyend="09-30")
+   seven<-dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart="04-01", wyend="03-31")
   }
    
    else {seven<-paste0("No flow data")}
    
    seven
  })
+  
+  
+ fourteenQthree<-eventReactive(input$goButton, {if(nrow(data())!=0)
+ {q<-data()[,c(1,2)]
+ 
+ fourteen<-dflow(x=q, m=14, r=3, yearstart=NA, yearend=NA, wystart="04-01", wyend="03-31")
+ }
    
+   else {fourteen<-paste0("No flow data")}
    
+   fourteen
+ })
+ 
+ 
  thirtyQfive<-eventReactive(input$goButton, {if(nrow(data())!=0)
    {q<-data()[,c(1,2)]
    
-   thirty<-dflow(x=q, m=30, r=5, yearstart=NA, yearend=NA, wystart="10-01", wyend="09-30")
+   thirty<-dflow(x=q, m=30, r=5, yearstart=NA, yearend=NA, wystart="04-01", wyend="03-31")
    }
    
    else {thirty<-paste0("No flow data")}
@@ -386,75 +403,93 @@ output$boxplot<-renderPlot({
  
  #data for shiny app view
  output$oneQten<-renderText({
-   if(nrow(data())!=0) {paste0("1Q10: ",round(oneQten(),digits=0))}
+   if(nrow(data())!=0) {paste0("1Q10: ",round(oneQten(),digits=3))}
    else{paste0("1Q10: ",oneQten())}
  })
  output$sevenQten<-renderText({
-   if(nrow(data())!=0) {paste0("7Q10: ",round(sevenQten(),digits=0))}
+   if(nrow(data())!=0) {paste0("7Q10: ",round(sevenQten(),digits=3))}
    else{paste0("1Q10: ",sevenQten())}
  })
+ output$fourteenQthree<-renderText({
+   if(nrow(data())!=0) {paste0("14Q3: ",round(fourteenQthree(),digits=3))}
+   else{paste0("1Q10: ",fourteenQthree())}
+ })
  output$thirtyQfive<-renderText({
-   if(nrow(data())!=0) {paste0("30Q5: ",round(thirtyQfive(),digits=0))}
+   if(nrow(data())!=0) {paste0("30Q5: ",round(thirtyQfive(),digits=3))}
    else{paste0("1Q10: ",thirtyQfive())}
  })
  output$harmonic<-renderText({
-   if(nrow(data())!=0) {paste0("Harmonic Mean: ",round(harmonic(),digits=0))}
+   if(nrow(data())!=0) {paste0("Harmonic Mean: ",round(harmonic(),digits=3))}
    else{paste0("1Q10: ",harmonic())}
  })
               
-#calculate monthly 1Q10s, 7Q10s, and 30Q5s - merge into one dataframe
+#calculate monthly 1Q10s, 7Q10s, 14Q3, and 30Q5s - merge into one dataframe
  #note that monthly flows for february will exclude a leap year day
  
  monthly<-eventReactive(input$goButton, {if(nrow(data())!=0){
    q<-data()[,c(1,2)]
    
    #calculate monthly dflow for 7Q10 and 30Q5
-   jan1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="01-01", wyend="01-31"),digits=3)
-   feb1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="02-01", wyend="02-28"),digits=3)
-   mar1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="03-01", wyend="03-31"),digits=3)
-   apr1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="04-01", wyend="04-30"),digits=3)
-   may1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="05-01", wyend="05-31"),digits=3)
-   jun1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="06-01", wyend="06-30"),digits=3)
-   jul1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="07-01", wyend="07-31"),digits=3)
-   aug1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="08-01", wyend="08-31"),digits=3)
-   sep1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="09-01", wyend="09-30"),digits=3)
-   oct1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="10-01", wyend="10-31"),digits=3)
-   nov1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="11-01", wyend="11-30"),digits=3)
-   dec1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="12-01", wyend="12-31"),digits=3)
+   jan1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="01-01", wyend="01-31"),digits=2)
+   feb1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="02-01", wyend="02-28"),digits=2)
+   mar1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="03-01", wyend="03-31"),digits=2)
+   apr1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="04-01", wyend="04-30"),digits=2)
+   may1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="05-01", wyend="05-31"),digits=2)
+   jun1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="06-01", wyend="06-30"),digits=2)
+   jul1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="07-01", wyend="07-31"),digits=2)
+   aug1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="08-01", wyend="08-31"),digits=2)
+   sep1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="09-01", wyend="09-30"),digits=2)
+   oct1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="10-01", wyend="10-31"),digits=2)
+   nov1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="11-01", wyend="11-30"),digits=2)
+   dec1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="12-01", wyend="12-31"),digits=2)
    
-   jan7<-round(dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart="01-01", wyend="01-31"),digits=3)
-   feb7<-round(dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart="02-01", wyend="02-28"),digits=3)
-   mar7<-round(dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart="03-01", wyend="03-31"),digits=3)
-   apr7<-round(dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart="04-01", wyend="04-30"),digits=3)
-   may7<-round(dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart="05-01", wyend="05-31"),digits=3)
-   jun7<-round(dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart="06-01", wyend="06-30"),digits=3)
-   jul7<-round(dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart="07-01", wyend="07-31"),digits=3)
-   aug7<-round(dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart="08-01", wyend="08-31"),digits=3)
-   sep7<-round(dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart="09-01", wyend="09-30"),digits=3)
-   oct7<-round(dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart="10-01", wyend="10-31"),digits=3)
-   nov7<-round(dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart="11-01", wyend="11-30"),digits=3)
-   dec7<-round(dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart="12-01", wyend="12-31"),digits=3)
+   jan7<-round(dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart="01-01", wyend="01-31"),digits=2)
+   feb7<-round(dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart="02-01", wyend="02-28"),digits=2)
+   mar7<-round(dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart="03-01", wyend="03-31"),digits=2)
+   apr7<-round(dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart="04-01", wyend="04-30"),digits=2)
+   may7<-round(dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart="05-01", wyend="05-31"),digits=2)
+   jun7<-round(dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart="06-01", wyend="06-30"),digits=2)
+   jul7<-round(dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart="07-01", wyend="07-31"),digits=2)
+   aug7<-round(dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart="08-01", wyend="08-31"),digits=2)
+   sep7<-round(dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart="09-01", wyend="09-30"),digits=2)
+   oct7<-round(dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart="10-01", wyend="10-31"),digits=2)
+   nov7<-round(dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart="11-01", wyend="11-30"),digits=2)
+   dec7<-round(dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart="12-01", wyend="12-31"),digits=2)
+ 
+   jan14<-round(dflow(x=q, m=14, r=10, yearstart=NA, yearend=NA, wystart="01-01", wyend="01-31"),digits=2)
+   feb14<-round(dflow(x=q, m=14, r=10, yearstart=NA, yearend=NA, wystart="02-01", wyend="02-28"),digits=2)
+   mar14<-round(dflow(x=q, m=14, r=10, yearstart=NA, yearend=NA, wystart="03-01", wyend="03-31"),digits=2)
+   apr14<-round(dflow(x=q, m=14, r=10, yearstart=NA, yearend=NA, wystart="04-01", wyend="04-30"),digits=2)
+   may14<-round(dflow(x=q, m=14, r=10, yearstart=NA, yearend=NA, wystart="05-01", wyend="05-31"),digits=2)
+   jun14<-round(dflow(x=q, m=14, r=10, yearstart=NA, yearend=NA, wystart="06-01", wyend="06-30"),digits=2)
+   jul14<-round(dflow(x=q, m=14, r=10, yearstart=NA, yearend=NA, wystart="07-01", wyend="07-31"),digits=2)
+   aug14<-round(dflow(x=q, m=14, r=10, yearstart=NA, yearend=NA, wystart="08-01", wyend="08-31"),digits=2)
+   sep14<-round(dflow(x=q, m=14, r=10, yearstart=NA, yearend=NA, wystart="09-01", wyend="09-30"),digits=2)
+   oct14<-round(dflow(x=q, m=14, r=10, yearstart=NA, yearend=NA, wystart="10-01", wyend="10-31"),digits=2)
+   nov14<-round(dflow(x=q, m=14, r=10, yearstart=NA, yearend=NA, wystart="11-01", wyend="11-30"),digits=2)
+   dec14<-round(dflow(x=q, m=14, r=10, yearstart=NA, yearend=NA, wystart="12-01", wyend="12-31"),digits=2)
    
-   jan30<-round(dflow(x=q, m=30, r=5, yearstart=NA, yearend=NA, wystart="01-01", wyend="01-31"),digits=3)
-   feb30<-round(dflow(x=q, m=30, r=5, yearstart=NA, yearend=NA, wystart="02-01", wyend="02-28"),digits=3)
-   mar30<-round(dflow(x=q, m=30, r=5, yearstart=NA, yearend=NA, wystart="03-01", wyend="03-31"),digits=3)
-   apr30<-round(dflow(x=q, m=30, r=5, yearstart=NA, yearend=NA, wystart="04-01", wyend="04-30"),digits=3)
-   may30<-round(dflow(x=q, m=30, r=5, yearstart=NA, yearend=NA, wystart="05-01", wyend="05-31"),digits=3)
-   jun30<-round(dflow(x=q, m=30, r=5, yearstart=NA, yearend=NA, wystart="06-01", wyend="06-30"),digits=3)
-   jul30<-round(dflow(x=q, m=30, r=5, yearstart=NA, yearend=NA, wystart="07-01", wyend="07-31"),digits=3)
-   aug30<-round(dflow(x=q, m=30, r=5, yearstart=NA, yearend=NA, wystart="08-01", wyend="08-31"),digits=3)
-   sep30<-round(dflow(x=q, m=30, r=5, yearstart=NA, yearend=NA, wystart="09-01", wyend="09-30"),digits=3)
-   oct30<-round(dflow(x=q, m=30, r=5, yearstart=NA, yearend=NA, wystart="10-01", wyend="10-31"),digits=3)
-   nov30<-round(dflow(x=q, m=30, r=5, yearstart=NA, yearend=NA, wystart="11-01", wyend="11-30"),digits=3)
-   dec30<-round(dflow(x=q, m=30, r=5, yearstart=NA, yearend=NA, wystart="12-01", wyend="12-31"),digits=3)
+   jan30<-round(dflow(x=q, m=30, r=5, yearstart=NA, yearend=NA, wystart="01-01", wyend="01-31"),digits=2)
+   feb30<-round(dflow(x=q, m=30, r=5, yearstart=NA, yearend=NA, wystart="02-01", wyend="02-28"),digits=2)
+   mar30<-round(dflow(x=q, m=30, r=5, yearstart=NA, yearend=NA, wystart="03-01", wyend="03-31"),digits=2)
+   apr30<-round(dflow(x=q, m=30, r=5, yearstart=NA, yearend=NA, wystart="04-01", wyend="04-30"),digits=2)
+   may30<-round(dflow(x=q, m=30, r=5, yearstart=NA, yearend=NA, wystart="05-01", wyend="05-31"),digits=2)
+   jun30<-round(dflow(x=q, m=30, r=5, yearstart=NA, yearend=NA, wystart="06-01", wyend="06-30"),digits=2)
+   jul30<-round(dflow(x=q, m=30, r=5, yearstart=NA, yearend=NA, wystart="07-01", wyend="07-31"),digits=2)
+   aug30<-round(dflow(x=q, m=30, r=5, yearstart=NA, yearend=NA, wystart="08-01", wyend="08-31"),digits=2)
+   sep30<-round(dflow(x=q, m=30, r=5, yearstart=NA, yearend=NA, wystart="09-01", wyend="09-30"),digits=2)
+   oct30<-round(dflow(x=q, m=30, r=5, yearstart=NA, yearend=NA, wystart="10-01", wyend="10-31"),digits=2)
+   nov30<-round(dflow(x=q, m=30, r=5, yearstart=NA, yearend=NA, wystart="11-01", wyend="11-30"),digits=2)
+   dec30<-round(dflow(x=q, m=30, r=5, yearstart=NA, yearend=NA, wystart="12-01", wyend="12-31"),digits=2)
    
    #combine into df
    months<-c("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")
    ones<-c(jan1,feb1,mar1,apr1,may1,jun1,jul1,aug1,sep1,oct1,nov1,dec1)
    sevens<-c(jan7,feb7,mar7,apr7,may7,jun7,jul7,aug7,sep7,oct7,nov7,dec7)
+   fourteens <- c(jan14,feb14,mar14,apr14,may14,jun14,jul14,aug14,sep14,oct14,nov14,dec14)
    thirtys<-c(jan30,feb30,mar30,apr30,may30,jun30,jul30,aug30,sep30,oct30,nov30,dec30)
    
-   monthly<-data.frame("Month"=months,"1Q10"=ones,"7Q10"=sevens,"30Q5"=thirtys)
+   monthly<-data.frame("Month"=months,"1Q10"=ones,"7Q10"=sevens, "14Q3"=fourteens, "30Q5"=thirtys)
  }
    else {monthly<-data.frame(No.Flow.Data=character())}
    
@@ -474,12 +509,13 @@ output$boxplot<-renderPlot({
    
  q<-data()[,c(1,2)]
  
- seas1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart=input$startm, wyend=input$endm),digits=3)
- seas7<-round(dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart=input$startm, wyend=input$endm),digits=3)
- seas30<-round(dflow(x=q, m=30, r=5, yearstart=NA, yearend=NA, wystart=input$startm, wyend=input$endm),digits=3)
+ seas1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart=input$startm, wyend=input$endm),digits=4)
+ seas7<-round(dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart=input$startm, wyend=input$endm),digits=4)
+ seas14<-round(dflow(x=q, m=14, r=3, yearstart=NA, yearend=NA, wystart=input$startm, wyend=input$endm),digits=4)
+ seas30<-round(dflow(x=q, m=30, r=5, yearstart=NA, yearend=NA, wystart=input$startm, wyend=input$endm),digits=4)
  
  #combine into df
- seasonal<-data.frame("1Q10"=seas1,"7Q10"=seas7,"30Q5"=seas30)}
+ seasonal<-data.frame("1Q10"=seas1,"7Q10"=seas7,"14Q3" = seas14, "30Q5"=seas30)}
    
  else {seasonal<-data.frame(No.Flow.Data=character())}
  
@@ -589,16 +625,19 @@ param<-eventReactive(input$goButton, {
   writeData(wb,"Flow Calculations", startRow=5, x="7Q10 for complete timeframe")
   writeData(wb,"Flow Calculations", startRow=5,startCol=2, x=sevenQten())
   
-  writeData(wb,"Flow Calculations", startRow=7, x= "30Q5 for complete timeframe")
-  writeData(wb,"Flow Calculations", startRow=7,startCol=2, x=thirtyQfive())
+  writeData(wb,"Flow Calculations", startRow=7, x="14Q3 for complete timeframe")
+  writeData(wb,"Flow Calculations", startRow=7,startCol=2, x=sevenQten())
   
-  writeData(wb,"Flow Calculations", startRow=9, x="harmonic mean for complete timeframe")
-  writeData(wb,"Flow Calculations", startRow=9,startCol=2, x=harmonic())
+  writeData(wb,"Flow Calculations", startRow=9, x= "30Q5 for complete timeframe")
+  writeData(wb,"Flow Calculations", startRow=9,startCol=2, x=thirtyQfive())
   
-  writeData(wb,"Flow Calculations", startRow=3, startCol=6, x="1Q10, 7Q10, and 30Q5 for each month of the year")
+  writeData(wb,"Flow Calculations", startRow=11, x="harmonic mean for complete timeframe")
+  writeData(wb,"Flow Calculations", startRow=11,startCol=2, x=harmonic())
+  
+  writeData(wb,"Flow Calculations", startRow=3, startCol=6, x="1Q10, 7Q10, 14Q3, and 30Q5 for each month of the year")
   writeDataTable(wb,"Flow Calculations", startRow=5, startCol=6, x=monthly(),tableStyle="none")
   
-  writeData(wb,"Flow Calculations", startRow=3, startCol=12, x="1Q10, 7Q10, and 30Q5 for season specified")
+  writeData(wb,"Flow Calculations", startRow=3, startCol=12, x="1Q10, 7Q10, 14Q3, and 30Q5 for season specified")
   writeData(wb,"Flow Calculations", startRow=4, startCol=12, x=startmm)
   writeData(wb,"Flow Calculations", startRow=5, startCol=12, x=endmm)
   writeDataTable(wb,"Flow Calculations", startRow=6, startCol=12, x=seasonal(),tableStyle="none")
