@@ -75,10 +75,10 @@ ui<-fluidPage(
       
       textInput("startm",
                 label="Select season start (mm-dd)",
-                value = "10-01"),
+                value = "04-01"),
       textInput("endm",
                 label="Select season end (mm-dd)",
-                value = "09-30"),
+                value = "03-31"),
       
       #add action button, so query doesn't run until button is clicked
       actionButton("goButton","Run Query"),
@@ -345,7 +345,7 @@ output$boxplot<-renderPlot({
  oneQten<-eventReactive(input$goButton, { if(nrow(data())!=0)
   { q<-data()[,c(1,2)]
    
-   one<-dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="10-01", wyend="09-30")
+   one<-dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="04-01", wyend="03-31")
    }
    
    else {one<-paste0("No flow data")}
@@ -357,7 +357,7 @@ output$boxplot<-renderPlot({
  sevenQten<-eventReactive(input$goButton, {if(nrow(data())!=0)
    {q<-data()[,c(1,2)]
    
-   seven<-dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart="10-01", wyend="09-30")
+   seven<-dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart="04-01", wyend="03-31")
   }
    
    else {seven<-paste0("No flow data")}
@@ -369,7 +369,7 @@ output$boxplot<-renderPlot({
  fourteenQthree<-eventReactive(input$goButton, {if(nrow(data())!=0)
  {q<-data()[,c(1,2)]
  
- fourteen<-dflow(x=q, m=14, r=3, yearstart=NA, yearend=NA, wystart="10-01", wyend="09-30")
+ fourteen<-dflow(x=q, m=14, r=3, yearstart=NA, yearend=NA, wystart="04-01", wyend="03-31")
  }
    
    else {fourteen<-paste0("No flow data")}
@@ -381,7 +381,7 @@ output$boxplot<-renderPlot({
  thirtyQfive<-eventReactive(input$goButton, {if(nrow(data())!=0)
    {q<-data()[,c(1,2)]
    
-   thirty<-dflow(x=q, m=30, r=5, yearstart=NA, yearend=NA, wystart="10-01", wyend="09-30")
+   thirty<-dflow(x=q, m=30, r=5, yearstart=NA, yearend=NA, wystart="04-01", wyend="03-31")
    }
    
    else {thirty<-paste0("No flow data")}
