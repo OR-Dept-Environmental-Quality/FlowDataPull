@@ -1,5 +1,5 @@
 #create shiny app to pull USGS data and automatically calculate the 7Q10, 30Q5, and harmonic mean flow
-#over a selectd time period
+#over a selected time period
 
 #this app uses the dflow function created by Ryan Michie
 
