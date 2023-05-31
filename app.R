@@ -1,7 +1,3 @@
-.libPaths('C:/Users/epricha/Documents/R/lib')
-#devtools::install_github('OR-Dept-Environmental-Quality/dflowR', 
-                         #host = 'https://api.github.com', 
-                         #dependencies= TRUE, force = TRUE, upgrade='never')
 #create shiny app to pull USGS data and automatically calculate the 7Q10, 30Q5, and harmonic mean flow
 #over a selectd time period
 
