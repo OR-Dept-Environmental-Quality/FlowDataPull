@@ -425,7 +425,7 @@ output$boxplot<-renderPlot({
  monthly<-eventReactive(input$goButton, {if(nrow(data())!=0){
    q<-data()[,c(1,2)]
    
-   #calculate monthly dflow for 7Q10 and 30Q5
+   #calculate monthly dflow for 1Q10, 7Q10, 14Q3, and 30Q5
    jan1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="01-01", wyend="01-31"),digits=2)
    feb1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="02-01", wyend="02-28"),digits=2)
    mar1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="03-01", wyend="03-31"),digits=2)
@@ -452,18 +452,18 @@ output$boxplot<-renderPlot({
    nov7<-round(dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart="11-01", wyend="11-30"),digits=2)
    dec7<-round(dflow(x=q, m=7, r=10, yearstart=NA, yearend=NA, wystart="12-01", wyend="12-31"),digits=2)
  
-   jan14<-round(dflow(x=q, m=14, r=10, yearstart=NA, yearend=NA, wystart="01-01", wyend="01-31"),digits=2)
-   feb14<-round(dflow(x=q, m=14, r=10, yearstart=NA, yearend=NA, wystart="02-01", wyend="02-28"),digits=2)
-   mar14<-round(dflow(x=q, m=14, r=10, yearstart=NA, yearend=NA, wystart="03-01", wyend="03-31"),digits=2)
-   apr14<-round(dflow(x=q, m=14, r=10, yearstart=NA, yearend=NA, wystart="04-01", wyend="04-30"),digits=2)
-   may14<-round(dflow(x=q, m=14, r=10, yearstart=NA, yearend=NA, wystart="05-01", wyend="05-31"),digits=2)
-   jun14<-round(dflow(x=q, m=14, r=10, yearstart=NA, yearend=NA, wystart="06-01", wyend="06-30"),digits=2)
-   jul14<-round(dflow(x=q, m=14, r=10, yearstart=NA, yearend=NA, wystart="07-01", wyend="07-31"),digits=2)
-   aug14<-round(dflow(x=q, m=14, r=10, yearstart=NA, yearend=NA, wystart="08-01", wyend="08-31"),digits=2)
-   sep14<-round(dflow(x=q, m=14, r=10, yearstart=NA, yearend=NA, wystart="09-01", wyend="09-30"),digits=2)
-   oct14<-round(dflow(x=q, m=14, r=10, yearstart=NA, yearend=NA, wystart="10-01", wyend="10-31"),digits=2)
-   nov14<-round(dflow(x=q, m=14, r=10, yearstart=NA, yearend=NA, wystart="11-01", wyend="11-30"),digits=2)
-   dec14<-round(dflow(x=q, m=14, r=10, yearstart=NA, yearend=NA, wystart="12-01", wyend="12-31"),digits=2)
+   jan14<-round(dflow(x=q, m=14, r=3, yearstart=NA, yearend=NA, wystart="01-01", wyend="01-31"),digits=2)
+   feb14<-round(dflow(x=q, m=14, r=3, yearstart=NA, yearend=NA, wystart="02-01", wyend="02-28"),digits=2)
+   mar14<-round(dflow(x=q, m=14, r=3, yearstart=NA, yearend=NA, wystart="03-01", wyend="03-31"),digits=2)
+   apr14<-round(dflow(x=q, m=14, r=3, yearstart=NA, yearend=NA, wystart="04-01", wyend="04-30"),digits=2)
+   may14<-round(dflow(x=q, m=14, r=3, yearstart=NA, yearend=NA, wystart="05-01", wyend="05-31"),digits=2)
+   jun14<-round(dflow(x=q, m=14, r=3, yearstart=NA, yearend=NA, wystart="06-01", wyend="06-30"),digits=2)
+   jul14<-round(dflow(x=q, m=14, r=3, yearstart=NA, yearend=NA, wystart="07-01", wyend="07-31"),digits=2)
+   aug14<-round(dflow(x=q, m=14, r=3, yearstart=NA, yearend=NA, wystart="08-01", wyend="08-31"),digits=2)
+   sep14<-round(dflow(x=q, m=14, r=3, yearstart=NA, yearend=NA, wystart="09-01", wyend="09-30"),digits=2)
+   oct14<-round(dflow(x=q, m=14, r=3, yearstart=NA, yearend=NA, wystart="10-01", wyend="10-31"),digits=2)
+   nov14<-round(dflow(x=q, m=14, r=3, yearstart=NA, yearend=NA, wystart="11-01", wyend="11-30"),digits=2)
+   dec14<-round(dflow(x=q, m=14, r=3, yearstart=NA, yearend=NA, wystart="12-01", wyend="12-31"),digits=2)
    
    jan30<-round(dflow(x=q, m=30, r=5, yearstart=NA, yearend=NA, wystart="01-01", wyend="01-31"),digits=2)
    feb30<-round(dflow(x=q, m=30, r=5, yearstart=NA, yearend=NA, wystart="02-01", wyend="02-28"),digits=2)
