@@ -425,7 +425,7 @@ output$boxplot<-renderPlot({
  monthly<-eventReactive(input$goButton, {if(nrow(data())!=0){
    q<-data()[,c(1,2)]
    
-   #calculate monthly dflow for 7Q10 and 30Q5
+   #calculate monthly dflow for 1Q10, 7Q10, 14Q3, and 30Q5
    jan1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="01-01", wyend="01-31"),digits=2)
    feb1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="02-01", wyend="02-28"),digits=2)
    mar1<-round(dflow(x=q, m=1, r=10, yearstart=NA, yearend=NA, wystart="03-01", wyend="03-31"),digits=2)
