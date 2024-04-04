@@ -500,7 +500,7 @@ output$boxplot<-renderPlot({
    monthly
  })
  
- #do seasonal calculations for 1Q10, 7Q10, and 30Q5
+ #do seasonal calculations for 1Q10, 7Q10,14Q3, and 30Q5
  seasonal<-eventReactive(input$goButton, {if(nrow(data())!=0){
    
  q<-data()[,c(1,2)]
