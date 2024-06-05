@@ -163,7 +163,7 @@ ui<-fluidPage(
                           This approach is recommended by EPA (https://www.epa.gov/ceam/technical-support-dflow#xqy) and is applied in USGS's SWSTAT program, 
                           although it is not implemented in DFLOW 3.1."),
                        h5("Shiny Application created and maintained by Aliana Britson."),
-                       h5("Code assistance credit to Ryan Michie and Vanessa Rose"),
+                       h5("Code assistance credit to Ryan Michie, Vanessa Rose, and Emma Prichard"),
                        h5("Validation assistance credit to Steven Schnurbusch and Erich Brandstetter"))
                      
   ),
