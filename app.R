@@ -622,7 +622,7 @@ param<-eventReactive(input$goButton, {
   writeData(wb,"Flow Calculations", startRow=5,startCol=2, x=sevenQten())
   
   writeData(wb,"Flow Calculations", startRow=7, x="14Q3 for complete timeframe")
-  writeData(wb,"Flow Calculations", startRow=7,startCol=2, x=sevenQten())
+  writeData(wb,"Flow Calculations", startRow=7,startCol=2, x=fourteenQthree())
   
   writeData(wb,"Flow Calculations", startRow=9, x= "30Q5 for complete timeframe")
   writeData(wb,"Flow Calculations", startRow=9,startCol=2, x=thirtyQfive())
