@@ -185,11 +185,13 @@ server<- function(input, output, session) {
   info<-eventReactive(input$goButton, {
     
     if(input$type=="USGS"){
-    info<-readNWISsite(input$Station)
+    info<-read_waterdata_monitoring_location(monitoring_location_id=paste0('USGS-',toString(sprintf("%s",input$Station))))
+    #drop geometry column
+    info<-sf::st_drop_geometry(info)
     
-    sub<-select(info, agency_cd,site_no,station_nm,dec_lat_va,dec_long_va,huc_cd)
+    sub<-select(info, agency_code,monitoring_location_number,monitoring_location_name,hydrologic_unit_code)
     
-    colnames(sub)<-c("Agency","Station","Name","Latitude","Longitude","HUC")
+    colnames(sub)<-c("Agency","Station","Name","HUC")
     
     sub}
     
@@ -208,13 +210,13 @@ server<- function(input, output, session) {
     
     if(input$type=="USGS") {
     #query data - returns mean daily flow in cfs
-    q.df <- readNWISdv(siteNumbers = toString(sprintf("%s",input$Station)),
-                       parameterCd = "00060",
-                       startDate =toString(sprintf("%s",input$startd)),
-                       endDate = toString(sprintf("%s",input$endd)),
-                       statCd = "00003")
+    q.df <- read_waterdata_daily(monitoring_location_id = paste0('USGS-',toString(sprintf("%s",input$Station))),
+                       parameter_code = "00060",
+                       time =c(toString(sprintf("%s",input$startd)),toString(sprintf("%s",input$endd))),
+                       statistic_id = "00003")
     
-    q <- q.df[,c(3,4,5)]
+    #since USGS data pull now includes "geometry" wich is from the sf spatial package we want to remove this, include "drop=TRUE" in code below when selecting columns
+    q <- q.df[,c(4,5,7),drop=TRUE]
     colnames(q) <-c("date", "flow","status")
     q$date <- as.POSIXct(q$date, format="%Y-%m-%d")
     }
@@ -231,6 +233,7 @@ server<- function(input, output, session) {
     q<-as.data.frame(p)
     }
     
+    class(q)<-"data.frame"
     q
   })
  
@@ -282,14 +285,11 @@ output$boxplot<-renderPlot({
   boxplot()
 })
  
- 
- 
  #get velocity data
  velocity<-eventReactive(input$goButton, { if(input$type=="USGS"){
    
    q.df <- readWQPqw(siteNumbers = paste0('USGS-',toString(sprintf("%s",input$Station))),
-                      parameterCd = c("00055","70232", '72149', '72168',"72169","72190","72254","72255","72294","72321",
-                                    "72322","72323","81380","81904"),
+                      parameterCd = c("00055"),
                      startDate =toString(sprintf("%s",input$startd)),
                       endDate = toString(sprintf("%s",input$endd))
                       )
@@ -316,7 +316,7 @@ output$boxplot<-renderPlot({
  depth<-eventReactive(input$goButton, {if(input$type=="USGS"){
    
    q.df <- readWQPqw(siteNumbers = paste0('USGS-',toString(sprintf("%s",input$Station))),
-                       parameterCd = c("00064","72178","72199","82903", "85310","85311"),
+                       parameterCd = c("00064"),
                       startDate =toString(sprintf("%s",input$startd)),
                       endDate = toString(sprintf("%s",input$endd)))
    
